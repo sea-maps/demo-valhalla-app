@@ -1,31 +1,53 @@
-import { PeliasProvider } from 'leaflet-geosearch'
 import axios from 'axios'
 
 export const PELIAS_URL = `${process.env.REACT_APP_PELIAS_URL}/v1/autocomplete`
-export const PELIASE_URL_REVERSE = `${process.env.REACT_APP_PELIAS_URL}/reverse`
+export const PELIASE_URL_REVERSE = `${process.env.REACT_APP_PELIAS_URL}/v1/reverse`
 
-const peliasProvider = new PeliasProvider({
-  host: process.env.REACT_APP_PELIAS_URL,
-})
-export const searchGeocode = async (userInput) => {
-  const url = peliasProvider.endpoint({
-    query: userInput,
-    type: 'SEARCH',
-  })
+/* Check if string is a valid latitude and longitude  */
+export function checkIfValidLatLng(str) {
+  // Regular expression to check if string is a latitude and longitude
+  const regexExp = /^((\-?|\+?)?\d+(\.\d+)?),\s*((\-?|\+?)?\d+(\.\d+)?)$/gi
 
-  return await axios.get(url)
+  return regexExp.test(str)
 }
 
-export const reverseGeocode = async (lon, lat) => {
-  const url = peliasProvider.endpoint({
-    query: { lon, lat },
-    type: 'REVERSE',
+export const searchGeocode = async (userInput) => {
+  return await axios.get(PELIAS_URL, {
+    params: { text: userInput, limit: 5 },
   })
+}
 
-  return await axios.get(url)
+export const reverseGeocode = async ({ lat, lng }) => {
+  return await axios.get(PELIASE_URL_REVERSE, {
+    params: {
+      'point.lat': lat,
+      'point.lon': lng,
+      limit: 5,
+    },
+  })
 }
 
 export const parseGeocodeResponse = (resp) => {
-  const processedResults = peliasProvider.parse(resp)
+  const processedResults = resp.data.features.map((feature) => {
+    const res = {
+      x: feature.geometry.coordinates[0],
+      y: feature.geometry.coordinates[1],
+      label: feature.properties.label,
+      bounds: null,
+      raw: feature,
+    }
+
+    // bbox values are only available for features derived from non-point geometries
+    // geojson bbox format: [minX, minY, maxX, maxY]
+    if (Array.isArray(feature.bbox) && feature.bbox.length === 4) {
+      res.bounds = [
+        [feature.bbox[1], feature.bbox[0]], // s, w
+        [feature.bbox[3], feature.bbox[2]], // n, e
+      ]
+    }
+
+    return res
+  })
+
   return processedResults
 }

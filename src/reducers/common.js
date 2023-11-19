@@ -28,7 +28,7 @@ const initialState = {
     topic: null,
     description: null,
   },
-  profile: 'bicycle',
+  profile: 'car',
   settings: { ...settingsInit },
   map: null,
 }

@@ -1,11 +1,16 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 import PropTypes from 'prop-types'
 import { Search, Icon, Button } from 'semantic-ui-react'
 import { useSelector } from 'react-redux'
 import _debounce from 'lodash/debounce'
-import { useQuery } from '@tanstack/react-query'
-import { searchGeocode, parseGeocodeResponse } from '../utils/pelias'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  searchGeocode,
+  parseGeocodeResponse,
+  checkIfValidLatLng,
+  reverseGeocode,
+} from '../utils/pelias'
 import { useDispatch } from 'react-redux'
 import L from 'leaflet'
 import { Box } from '@mui/material'
@@ -17,6 +22,13 @@ const useSearchGeocode = (searchInput) => {
   const result = useQuery({
     queryKey: ['searchGeocode', searchInput],
     queryFn: async () => {
+      const isLatLng = checkIfValidLatLng(searchInput)
+      if (isLatLng) {
+        const [lat, lng] = searchInput.split(',')
+        const resp = await reverseGeocode({ lat, lng })
+        return parseGeocodeResponse(resp)
+      }
+
       const resp = await searchGeocode(searchInput)
       return parseGeocodeResponse(resp)
     },
@@ -26,9 +38,25 @@ const useSearchGeocode = (searchInput) => {
   return result
 }
 
+const useFetchReserveGeocode = () => {
+  const queryClient = useQueryClient()
+
+  const fetchReserveGeocode = async ({ lat, lng }) => {
+    return await queryClient.fetchQuery({
+      queryKey: ['searchGeocode', { lat, lng }],
+      queryFn: async () => {
+        const resp = await reverseGeocode({ lat, lng })
+        return parseGeocodeResponse(resp)
+      },
+    })
+  }
+
+  return fetchReserveGeocode
+}
+
 const resultRenderer = (item) => {
   return (
-    <div className="flex-column">
+    <div key={`${item.y}-${item.x}`} className="flex-column">
       <span className="title">{item.label}</span>
     </div>
   )
@@ -38,6 +66,7 @@ const AutocompleteSearch = ({
   showDirections = false,
   showCurrentLocation = false,
   indexKey = 0,
+  setShowDirections,
 }) => {
   const map = useSelector((state) => {
     return state.common.map
@@ -51,13 +80,14 @@ const AutocompleteSearch = ({
   const [debounceSearchTerm, setDebounceSearchTerm] = useState('')
 
   const { data, isFetching } = useSearchGeocode(debounceSearchTerm)
+  const fetchReserveGeocode = useFetchReserveGeocode()
 
   const fetchSuggestionsDebounced = _debounce(async (value) => {
     setDebounceSearchTerm(value)
   }, 300) // Adjust debounce timing as needed (300ms in this example)
 
   // Function to handle search term change
-  const onSearchChange = async (e, { value }) => {
+  const onSearchChange = async (_, { value }) => {
     setSearchTerm(value)
     fetchSuggestionsDebounced(value)
   }
@@ -68,55 +98,82 @@ const AutocompleteSearch = ({
     setSearchTerm(selectedItem.label)
     setOpen(false)
 
+    const isoMarker = ExtraMarkers.icon({
+      icon: 'fa-number',
+      markerColor: 'green',
+      shape: 'circle',
+      prefix: 'fa',
+      iconColor: 'white',
+      number: (indexKey + 1).toString(),
+    })
+
+    if (currentLocationRef.current) {
+      map.removeLayer(currentLocationRef.current)
+    }
+
+    currentLocationRef.current = L.marker([selectedItem.y, selectedItem.x], {
+      icon: isoMarker,
+    }).addTo(map)
+
+    // move the map to have the location in its center
+    map.panTo(new L.LatLng(selectedItem.y, selectedItem.x))
+
+    console.log('data.results', data.results)
     dispatch(
       updateWaypoint({
-        waypoint: selectedItem,
+        waypoint: {
+          ...selectedItem,
+          results: data.results.slice(0, 5),
+        },
         index: indexKey,
       })
     )
     dispatch(makeRequest())
   }
 
-  const pointingToCurrentPosition = () => {
+  const pointingToCurrentPosition = async () => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
+      navigator.geolocation.getCurrentPosition(async (position) => {
         const latit = position.coords.latitude
         const longit = position.coords.longitude
-        // this is just a marker placed in that position
-        console.log('position', position)
 
-        const isoMarker = ExtraMarkers.icon({
-          icon: 'fa-number',
-          markerColor: 'blue',
-          shape: 'circle',
-          prefix: 'fa',
-          iconColor: 'white',
-          number: (indexKey + 1).toString(),
-        })
+        const results = await fetchReserveGeocode({ lat: latit, lng: longit })
 
-        if (currentLocationRef.current) {
-          map.removeLayer(currentLocationRef.current)
-        }
-
-        currentLocationRef.current = L.marker(
-          [position.coords.latitude, position.coords.longitude],
+        // default get the first item in list results
+        onResultSelect(
+          {},
           {
-            icon: isoMarker,
+            results: results,
+            result: results[0],
           }
-        ).addTo(map)
-
-        // move the map to have the location in its center
-        map.panTo(new L.LatLng(latit, longit))
+        )
       })
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (currentLocationRef.current) {
+        map.removeLayer(currentLocationRef.current)
+      }
+    }
+  }, [])
+
   return (
-    <Box display={'flex'}>
+    <Box display={'flex'} width={'100%'}>
       <Search
-        size="small"
+        style={{
+          flex: 1,
+          flexGrow: 1,
+        }}
         fluid
-        input={{ icon: 'search', iconPosition: 'left' }}
+        input={{
+          icon: 'search',
+          iconPosition: 'left',
+          style: {
+            width: '100%',
+          },
+        }}
         onSearchChange={onSearchChange}
         onResultSelect={onResultSelect}
         resultRenderer={resultRenderer}
@@ -127,26 +184,34 @@ const AutocompleteSearch = ({
         onMouseDown={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         loading={isFetching}
-        results={data}
+        results={data || []}
         value={searchTerm}
         placeholder="Hit enter for search..."
       />
 
       {showDirections && (
-        <Button icon color="blue" style={{ marginLeft: 4 }}>
-          <Icon color="white" name="location arrow" />
+        <Button
+          onClick={() => setShowDirections()}
+          icon
+          color="blue"
+          style={{ marginLeft: 4 }}
+        >
+          <Icon
+            style={{ transform: 'rotate(-90deg)' }}
+            name="level down alternate"
+          />
         </Button>
       )}
-      {showCurrentLocation && (
+      {showCurrentLocation && !showDirections ? (
         <Button
           onClick={pointingToCurrentPosition}
           icon
           color="blue"
           style={{ marginLeft: 4 }}
         >
-          <Icon color="white" name="crosshairs" />
+          <Icon name="crosshairs" />
         </Button>
-      )}
+      ) : null}
     </Box>
   )
 }
@@ -155,6 +220,7 @@ AutocompleteSearch.propTypes = {
   showDirections: PropTypes.bool,
   showCurrentLocation: PropTypes.bool,
   indexKey: PropTypes.number.isRequired,
+  setShowDirections: PropTypes.func,
 }
 
 export default AutocompleteSearch

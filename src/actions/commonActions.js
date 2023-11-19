@@ -67,7 +67,7 @@ export const addMap = (map) => ({
 })
 
 export const updatePermalink = () => (dispatch, getState) => {
-  const { waypoints } = getState().directions
+  const { waypoints } = getState().directionsV2
   const { geocodeResults, maxRange, interval } = getState().isochrones
   const { profile, /*settings,*/ activeTab } = getState().common
   const queryParams = new URLSearchParams()
@@ -77,12 +77,9 @@ export const updatePermalink = () => (dispatch, getState) => {
   if (activeTab === 0) {
     const wps = []
     for (const wp of waypoints) {
-      for (const result of wp.geocodeResults) {
-        if (result.selected) {
-          wps.push(result.sourcelnglat)
-        }
-      }
+      wps.push([wp.y, wp.x])
     }
+
     if (wps.length > 0) {
       queryParams.set('wps', wps.toString())
     }

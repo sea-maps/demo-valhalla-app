@@ -419,21 +419,22 @@ class Map extends React.Component {
       this.zoomToCoordinates()
     }
     if (
-      prevProps.directions.zoomObj.timeNow <
-      this.props.directions.zoomObj.timeNow
+      prevProps.directionsV2.zoomObj.timeNow <
+      this.props.directionsV2.zoomObj.timeNow
     ) {
-      this.zoomTo(this.props.directions.zoomObj.index)
+      console.log("this.props.directionsV2", this.props.directionsV2)
+      this.zoomTo(this.props.directionsV2.zoomObj.index)
     }
 
     this.addRoutes()
     this.handleHighlightSegment()
 
-    const { directions, isochrones } = this.props
+    const { directionsV2, isochrones } = this.props
 
-    if (!directions.successful) {
+    if (!directionsV2.successful) {
       routeLineStringLayer.clearLayers()
     }
-    if (!isochrones.successful) {
+    if (!directionsV2.successful) {
       isoPolygonLayer.clearLayers()
     }
   }
@@ -790,39 +791,68 @@ class Map extends React.Component {
 
   addWaypoints() {
     routeMarkersLayer.clearLayers()
-    const { waypoints } = this.props.directions
+    const { waypoints } = this.props.directionsV2
     let index = 0
     for (const waypoint of waypoints) {
-      for (const address of waypoint.geocodeResults) {
-        if (address.selected) {
-          const wpMarker = ExtraMarkers.icon({
-            icon: 'fa-number',
-            markerColor: 'green',
-            //shape: 'star',
-            prefix: 'fa',
-            number: (index + 1).toString(),
-          })
+      if(!waypoint.x || !waypoint.y) continue;
 
-          L.marker([address.displaylnglat[1], address.displaylnglat[0]], {
-            icon: wpMarker,
-            draggable: true,
-            index: index,
-            pmIgnore: true,
+      const wpMarker = ExtraMarkers.icon({
+        icon: 'fa-number',
+        markerColor: 'green',
+        //shape: 'star',
+        prefix: 'fa',
+        number: (index + 1).toString(),
+      })
+
+      L.marker([waypoint.y, waypoint.x], {
+        icon: wpMarker,
+        draggable: true,
+        index: index,
+        pmIgnore: true,
+      })
+        .addTo(routeMarkersLayer)
+        .bindTooltip(waypoint.label, {
+          permanent: false,
+        })
+        //.openTooltip()
+        .on('dragend', (e) => {
+          this.updateWaypointPosition({
+            latLng: e.target.getLatLng(),
+            index: e.target.options.index,
+            fromDrag: true,
           })
-            .addTo(routeMarkersLayer)
-            .bindTooltip(address.title, {
-              permanent: false,
-            })
-            //.openTooltip()
-            .on('dragend', (e) => {
-              this.updateWaypointPosition({
-                latLng: e.target.getLatLng(),
-                index: e.target.options.index,
-                fromDrag: true,
-              })
-            })
-        }
-      }
+        })
+
+      // for (const address of waypoint.geocodeResults) {
+      //   if (address.selected) {
+      //     const wpMarker = ExtraMarkers.icon({
+      //       icon: 'fa-number',
+      //       markerColor: 'green',
+      //       //shape: 'star',
+      //       prefix: 'fa',
+      //       number: (index + 1).toString(),
+      //     })
+
+      //     L.marker([address.displaylnglat[1], address.displaylnglat[0]], {
+      //       icon: wpMarker,
+      //       draggable: true,
+      //       index: index,
+      //       pmIgnore: true,
+      //     })
+      //       .addTo(routeMarkersLayer)
+      //       .bindTooltip(address.title, {
+      //         permanent: false,
+      //       })
+      //       //.openTooltip()
+      //       .on('dragend', (e) => {
+      //         this.updateWaypointPosition({
+      //           latLng: e.target.getLatLng(),
+      //           index: e.target.options.index,
+      //           fromDrag: true,
+      //         })
+      //       })
+      //   }
+      // }
       index += 1
     }
   }
@@ -831,6 +861,7 @@ class Map extends React.Component {
     const { map } = this
     const { lat, lng } = map.getCenter()
     const zoom = map.getZoom()
+    console.log("====", zoom)
     const osmURL = `https://www.openstreetmap.org/#map=${zoom}/${lat}/${lng}`
     window.open(osmURL, '_blank')
   }
@@ -1073,7 +1104,7 @@ class Map extends React.Component {
 }
 
 const mapStateToProps = (state) => {
-  const { directions, isochrones, common } = state
+  const { directions, directionsV2, isochrones, common } = state
   const {
     activeTab,
     profile,
@@ -1084,6 +1115,7 @@ const mapStateToProps = (state) => {
     showSettings,
   } = common
   return {
+    directionsV2,
     directions,
     isochrones,
     profile,
