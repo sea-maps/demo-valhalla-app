@@ -10,7 +10,7 @@ function PlaceInformation({ data }) {
   const { geometry, properties } = raw
 
   return (
-    <Card>
+    <Card style={{ width: '100%' }}>
       <Image
         src="https://storage.googleapis.com/support-forums-api/attachment/message-159468019-14123974350713629170.png"
         wrapped
@@ -63,6 +63,14 @@ function PlaceInformation({ data }) {
               return null
             }
 
+            const { coordinates = [] } = item.raw.geometry || {}
+            const search = decodeURIComponent(window.location.search)
+            const queryParams = new URLSearchParams(search)
+
+            queryParams.set('wps', `${coordinates.join(',')}`)
+
+            const url = window.location.pathname + '?' + queryParams.toString()
+
             return (
               <Item key={item.label}>
                 <Item.Image
@@ -70,7 +78,9 @@ function PlaceInformation({ data }) {
                   src="https://storage.googleapis.com/support-forums-api/attachment/message-159468019-14123974350713629170.png"
                 />
                 <Item.Content>
-                  <Item.Header as="a">{item.raw.properties.name}</Item.Header>
+                  <Item.Header as="a" href={url}>
+                    {item.raw.properties.name}
+                  </Item.Header>
                   <Item.Meta>{item.label}</Item.Meta>
                   <Item.Description></Item.Description>
                 </Item.Content>

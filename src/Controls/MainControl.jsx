@@ -103,7 +103,7 @@ function MainControl() {
       padding={2}
       borderRadius={2}
       backgroundColor={'white'}
-      width={300}
+      width={340}
       // overflow={'hidden auto'}
       // height={'max-conten'}
       // maxHeight={'70vh'}

@@ -124,15 +124,40 @@ const AutocompleteSearch = ({
   const pointingToCurrentPosition = async () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (position) => {
-        const latit = position.coords.latitude
-        const longit = position.coords.longitude
-
         fetchReserveGeocode(
           {
-            latLng: { lat: latit, lng: longit },
+            latLng: {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            },
             index: indexKey,
           },
           true
+        )
+
+        const isoMarker = ExtraMarkers.icon({
+          icon: 'fa-number',
+          markerColor: 'green',
+          shape: 'circle',
+          prefix: 'fa',
+          iconColor: 'white',
+          number: (indexKey + 1).toString(),
+        })
+
+        if (currentLocationRef.current) {
+          map.removeLayer(currentLocationRef.current)
+        }
+
+        currentLocationRef.current = L.marker(
+          [position.coords.latitude, position.coords.longitude],
+          {
+            icon: isoMarker,
+          }
+        ).addTo(map)
+
+        // move the map to have the location in its center
+        map.panTo(
+          new L.LatLng(position.coords.latitude, position.coords.longitude)
         )
       })
     }
@@ -170,7 +195,7 @@ const AutocompleteSearch = ({
         onFocus={() => setOpen(true)}
         onMouseDown={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        loading={false}
+        loading={waypoint.isFetching}
         results={waypoint.results || []}
         value={searchTerm}
         defaultValue={waypoint.inputValue}
@@ -190,7 +215,7 @@ const AutocompleteSearch = ({
           />
         </Button>
       )}
-      {showCurrentLocation && !showDirections ? (
+      {showCurrentLocation ? (
         <Button
           onClick={pointingToCurrentPosition}
           icon
