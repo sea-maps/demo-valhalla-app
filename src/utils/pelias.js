@@ -13,7 +13,7 @@ export function checkIfValidLatLng(str) {
 
 export const searchGeocode = async (userInput) => {
   return await axios.get(PELIAS_URL, {
-    params: { text: userInput, limit: 5 },
+    params: { text: userInput, size: 5 },
   })
 }
 
@@ -22,7 +22,7 @@ export const reverseGeocode = async ({ lat, lng }) => {
     params: {
       'point.lat': lat,
       'point.lon': lng,
-      limit: 5,
+      size: 5,
     },
   })
 }

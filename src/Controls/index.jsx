@@ -276,6 +276,7 @@ class MainControl extends React.Component {
 }
 
 const mapStateToProps = (state) => {
+  console.log("state", state.directions)
   const { message, activeTab, showDirectionsPanel } = state.common
   return {
     message,
