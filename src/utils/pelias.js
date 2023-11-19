@@ -12,12 +12,18 @@ export function checkIfValidLatLng(str) {
 }
 
 export const searchGeocode = async (userInput) => {
+  if (!userInput) {
+    return
+  }
   return await axios.get(PELIAS_URL, {
     params: { text: userInput, size: 5 },
   })
 }
 
 export const reverseGeocode = async ({ lat, lng }) => {
+  if (!lat || !lng) {
+    return
+  }
   return await axios.get(PELIASE_URL_REVERSE, {
     params: {
       'point.lat': lat,

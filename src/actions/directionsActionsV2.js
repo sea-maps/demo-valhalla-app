@@ -14,7 +14,12 @@ import {
   ADD_WAYPOINT,
 } from './types'
 
-import { reverseGeocode, parseGeocodeResponse } from 'utils/pelias'
+import {
+  reverseGeocode,
+  parseGeocodeResponse,
+  searchGeocode,
+  checkIfValidLatLng,
+} from 'utils/pelias'
 
 import {
   VALHALLA_OSM_URL,
@@ -39,6 +44,7 @@ export const doAddWaypoint = (doInsert) => (dispatch, getState) => {
     x: 0,
     y: 0,
     raw: undefined,
+    isFetching: false,
     label: '',
   }
   if (doInsert) {
@@ -77,8 +83,6 @@ export const makeRequest = () => (dispatch, getState) => {
 const fetchValhallaDirections = (valhallaRequest) => (dispatch) => {
   dispatch(showLoading(true))
 
-  console.log('valhallaRequest', valhallaRequest)
-
   const config = {
     params: { json: JSON.stringify(valhallaRequest.json) },
     headers: {
@@ -89,7 +93,6 @@ const fetchValhallaDirections = (valhallaRequest) => (dispatch) => {
     .get(VALHALLA_OSM_URL + '/route', config)
     .then(({ data }) => {
       data.decodedGeometry = parseDirectionsGeometry(data)
-      console.log('data', data)
       dispatch(registerRouteResponse(VALHALLA_OSM_URL, data))
       dispatch(zoomTo(data.decodedGeometry))
     })
@@ -153,37 +156,34 @@ export const doRemoveWaypoint = (index) => (dispatch, getState) => {
   dispatch(updatePermalink())
 }
 
-export const fetchReverseGeocodePerma = (object) => (dispatch) => {
+export const fetchReverseGeocodePerma = (object, init) => (dispatch) => {
   dispatch(requestGeocodeResults({ index: object.index, reverse: true }))
-  console.log('object', object)
-  const { index, permaLast, latLng } = object
-  const { lng, lat } = latLng
+
+  const { index, permaLast } = object
 
   if (index > 1) {
     dispatch(doAddWaypoint(true, permaLast))
   }
 
-  reverseGeocode({ lng, lat })
-    .then((response) => {
-      dispatch(
-        processGeocodeResponse(response, index, true, [lng, lat], permaLast)
-      )
-    })
-    .catch((error) => {
-      console.log(error) //eslint-disable-line
-    })
-  // .finally(() => {
-  //   // always executed
-  // })
+  dispatch(fetchReverseGeocode(object, init))
 }
 
-export const fetchReverseGeocode = (object) => (dispatch, getState) => {
+export const fetchReverseGeocode = (object, init) => (dispatch, getState) => {
   const { index } = object
   const { lng, lat } = object.latLng
 
+  if (!lat && !lng) {
+    return
+  }
+
+  dispatch(
+    requestGeocodeResults({
+      index,
+    })
+  )
   return reverseGeocode({ lng, lat })
     .then((response) => {
-      dispatch(processGeocodeResponse(response, index, true, [lng, lat]))
+      dispatch(processGeocodeResponse(response, index, true, init))
     })
     .catch((error) => {
       console.log(error) //eslint-disable-line
@@ -193,8 +193,37 @@ export const fetchReverseGeocode = (object) => (dispatch, getState) => {
   // })
 }
 
+export const fetchSearchGeocode = (object) => (dispatch) => {
+  const { index, inputValue } = object
+  const isLatLng = checkIfValidLatLng(inputValue)
+
+  if (isLatLng) {
+    const [lat, lng] = inputValue.split(',')
+    dispatch(fetchReverseGeocode({ latLng: { lat, lng } }, index))
+  } else {
+    if (!inputValue) {
+      return
+    }
+
+    dispatch(
+      requestGeocodeResults({
+        index,
+      })
+    )
+
+    searchGeocode(object.inputValue)
+      .then((response) => {
+        dispatch(processGeocodeResponse(response, index, false, false))
+      })
+      .catch((error) => {
+        console.log(error) //eslint-disable-line
+      })
+      .finally(() => {})
+  }
+}
+
 const processGeocodeResponse =
-  (resp, index, reverse, lngLat, permaLast) => (dispatch) => {
+  (resp, index, reverse, init, permaLast) => (dispatch, getState) => {
     const processedResults = parseGeocodeResponse(resp)
     // if no address can be found
     if (processedResults.length === 0) {
@@ -207,6 +236,25 @@ const processGeocodeResponse =
         })
       )
     }
+
+    if (init) {
+      dispatch(
+        updateWaypoint({
+          waypoint: {
+            ...processedResults[0],
+            inputValue: (processedResults[0] || {}).label,
+          },
+          index: index,
+        })
+      )
+    }
+
+    dispatch(
+      receiveGeocodeResults({
+        results: processedResults,
+        index,
+      })
+    )
 
     if (reverse) {
       if (permaLast === undefined) {

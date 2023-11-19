@@ -5,11 +5,13 @@ import { Icon, Button } from 'semantic-ui-react'
 import { useDispatch } from 'react-redux'
 import { Box } from '@mui/material'
 import {
-  doAddWaypoint,
+  makeRequest,
+  fetchReverseGeocodePerma,
   clearRoutes,
   doRemoveWaypoint,
-  fetchReverseGeocodePerma,
+  doAddWaypoint,
 } from 'actions/directionsActionsV2'
+
 import {
   updateProfile,
   resetSettings,
@@ -39,7 +41,7 @@ function MainControl() {
     return state.common.map
   })
   const waypoints = useSelector((state) => {
-    return state.directionsV2.waypoints
+    return state.directionsV2.waypoints || []
   })
 
   const handleRemoveWaypoints = () => {
@@ -51,6 +53,8 @@ function MainControl() {
     dispatch(updateProfile({ profile: newProfile }))
     dispatch(resetSettings())
     dispatch(updatePermalink())
+
+    dispatch(makeRequest())
   }
 
   useEffect(() => {
@@ -63,31 +67,28 @@ function MainControl() {
     if ('wps' in params && params.wps.length > 0) {
       const coordinates = params.wps.split(',').map(Number)
       const processedCoords = []
-      pairwise(coordinates, (current, next, i) => {
+      pairwise(coordinates, async (current, next, i) => {
         const latLng = { lat: next, lng: current }
+
+        processedCoords.push([latLng.lat, latLng.lng])
         const payload = {
           latLng,
           fromPerma: true,
           permaLast: i === coordinates.length / 2 - 1,
           index: i,
         }
-        processedCoords.push([latLng.lat, latLng.lng])
 
-        dispatch(fetchReverseGeocodePerma(payload))
+        dispatch(fetchReverseGeocodePerma(payload, true))
       })
 
       dispatch(zoomTo(processedCoords))
       dispatch(resetSettings())
-    }
-
-    if (waypoints.length === 0) {
+    } else if (waypoints.length === 0) {
       Array(2)
         .fill()
         .map((_, i) => dispatch(doAddWaypoint()))
     }
   }, [])
-
-  console.log(isDisplayDirection, waypoints)
 
   if (!map) {
     return null

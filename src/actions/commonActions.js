@@ -77,7 +77,8 @@ export const updatePermalink = () => (dispatch, getState) => {
   if (activeTab === 0) {
     const wps = []
     for (const wp of waypoints) {
-      wps.push([wp.y, wp.x])
+      console.log('wp', wp)
+      wps.push([wp.x, wp.y])
     }
 
     if (wps.length > 0) {

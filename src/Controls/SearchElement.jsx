@@ -1,57 +1,44 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 
 import PropTypes from 'prop-types'
 import { Search, Icon, Button } from 'semantic-ui-react'
 import { useSelector } from 'react-redux'
 import _debounce from 'lodash/debounce'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  searchGeocode,
-  parseGeocodeResponse,
-  checkIfValidLatLng,
-  reverseGeocode,
-} from '../utils/pelias'
 import { useDispatch } from 'react-redux'
 import L from 'leaflet'
 import { Box } from '@mui/material'
 import ExtraMarkers from 'Map/extraMarkers'
 
-import { makeRequest, updateWaypoint } from 'actions/directionsActionsV2'
+import {
+  makeRequest,
+  updateWaypoint,
+  fetchSearchGeocode as _fetchSearchGeocode,
+  fetchReverseGeocode as _fetchReverseGeocode,
+} from 'actions/directionsActionsV2'
 
-const useSearchGeocode = (searchInput) => {
-  const result = useQuery({
-    queryKey: ['searchGeocode', searchInput],
-    queryFn: async () => {
-      const isLatLng = checkIfValidLatLng(searchInput)
-      if (isLatLng) {
-        const [lat, lng] = searchInput.split(',')
-        const resp = await reverseGeocode({ lat, lng })
-        return parseGeocodeResponse(resp)
-      }
+const useFetchSearchGeocode = () => {
+  const dispatch = useDispatch()
 
-      const resp = await searchGeocode(searchInput)
-      return parseGeocodeResponse(resp)
-    },
-    enabled: !!searchInput,
-  })
+  const fetchSearchGeocode = (inputValue, index) => {
+    dispatch(_fetchSearchGeocode({ inputValue, index }))
+  }
 
-  return result
+  const debounceHandleAutocomplete = useCallback(
+    _debounce(fetchSearchGeocode, 500),
+    []
+  )
+
+  return debounceHandleAutocomplete
 }
 
 const useFetchReserveGeocode = () => {
-  const queryClient = useQueryClient()
+  const dispatch = useDispatch()
 
-  const fetchReserveGeocode = async ({ lat, lng }) => {
-    return await queryClient.fetchQuery({
-      queryKey: ['searchGeocode', { lat, lng }],
-      queryFn: async () => {
-        const resp = await reverseGeocode({ lat, lng })
-        return parseGeocodeResponse(resp)
-      },
-    })
+  const fetchReverseGeocode = ({ latLng: { lat, lng }, index }, init) => {
+    dispatch(_fetchReverseGeocode({ latLng: { lat, lng }, index }, init))
   }
 
-  return fetchReserveGeocode
+  return fetchReverseGeocode
 }
 
 const resultRenderer = (item) => {
@@ -72,27 +59,30 @@ const AutocompleteSearch = ({
     return state.common.map
   })
 
+  const waypoint = useSelector((state) => {
+    return state.directionsV2.waypoints[indexKey] || {}
+  })
+
   const currentLocationRef = useRef(null)
 
   const dispatch = useDispatch()
   const [open, setOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [debounceSearchTerm, setDebounceSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState()
 
-  const { data, isFetching } = useSearchGeocode(debounceSearchTerm)
+  useEffect(() => {
+    setSearchTerm(waypoint.inputValue)
+  }, [waypoint.inputValue])
+
   const fetchReserveGeocode = useFetchReserveGeocode()
-
-  const fetchSuggestionsDebounced = _debounce(async (value) => {
-    setDebounceSearchTerm(value)
-  }, 300) // Adjust debounce timing as needed (300ms in this example)
+  const fetchSearchGeocode = useFetchSearchGeocode()
 
   // Function to handle search term change
-  const onSearchChange = async (_, { value }) => {
+  const onSearchChange = useCallback((_, { value }) => {
     setSearchTerm(value)
-    fetchSuggestionsDebounced(value)
-  }
+    fetchSearchGeocode(value, indexKey)
+  }, [])
 
-  const onResultSelect = (event, data) => {
+  const onResultSelect = useCallback((event, data) => {
     const selectedItem = data.result
 
     setSearchTerm(selectedItem.label)
@@ -118,7 +108,6 @@ const AutocompleteSearch = ({
     // move the map to have the location in its center
     map.panTo(new L.LatLng(selectedItem.y, selectedItem.x))
 
-    console.log('data.results', data.results)
     dispatch(
       updateWaypoint({
         waypoint: {
@@ -126,10 +115,11 @@ const AutocompleteSearch = ({
           results: data.results.slice(0, 5),
         },
         index: indexKey,
+        inputValue: selectedItem.label,
       })
     )
     dispatch(makeRequest())
-  }
+  }, [])
 
   const pointingToCurrentPosition = async () => {
     if (navigator.geolocation) {
@@ -137,15 +127,12 @@ const AutocompleteSearch = ({
         const latit = position.coords.latitude
         const longit = position.coords.longitude
 
-        const results = await fetchReserveGeocode({ lat: latit, lng: longit })
-
-        // default get the first item in list results
-        onResultSelect(
-          {},
+        fetchReserveGeocode(
           {
-            results: results,
-            result: results[0],
-          }
+            latLng: { lat: latit, lng: longit },
+            index: indexKey,
+          },
+          true
         )
       })
     }
@@ -183,9 +170,10 @@ const AutocompleteSearch = ({
         onFocus={() => setOpen(true)}
         onMouseDown={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        loading={isFetching}
-        results={data || []}
+        loading={false}
+        results={waypoint.results || []}
         value={searchTerm}
+        defaultValue={waypoint.inputValue}
         placeholder="Hit enter for search..."
       />
 

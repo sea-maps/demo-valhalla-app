@@ -95,7 +95,7 @@ export const directions = (state = initialState, action) => {
             ? {
                 ...waypoint,
                 isFetching: false,
-                geocodeResults: action.payload.addresses,
+                results: action.payload.results,
               }
             : waypoint
         ),
@@ -111,35 +111,19 @@ export const directions = (state = initialState, action) => {
         ),
       }
 
-    case UPDATE_TEXTINPUT:
-      // Catch array of selectedAddress from all waypoints
-      // eslint-disable-next-line no-case-declarations
-      const selectedAddresses = []
-      state.waypoints.forEach((waypoint) => {
-        waypoint.geocodeResults.forEach((result, i) => {
-          selectedAddresses.push(
-            i === action.payload.addressindex ? waypoint : null
-          )
-        })
-      })
-      return {
-        ...state,
-        selectedAddresses: selectedAddresses,
-        waypoints: state.waypoints.map((waypoint, i) =>
-          i === action.payload.index
-            ? {
-                ...waypoint,
-                userInput: action.payload.inputValue,
-                geocodeResults: waypoint.geocodeResults.map((result, j) =>
-                  j === action.payload.addressindex
-                    ? { ...result, selected: true }
-                    : { ...result, selected: false }
-                ),
-              }
-            : waypoint
-        ),
+    case UPDATE_TEXTINPUT: {
+      const newWaypoints = JSON.parse(JSON.stringify(state.waypoints)) || []
+
+      newWaypoints[action.payload.index] = {
+        ...(newWaypoints[action.payload.index] || {}),
+        results: action.payload.results || [],
       }
 
+      return {
+        ...state,
+        waypoints: newWaypoints,
+      }
+    }
     case CLEAR_WAYPOINTS: {
       return {
         ...state,
