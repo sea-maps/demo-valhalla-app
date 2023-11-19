@@ -6,6 +6,7 @@ import {
   MESSAGE_HANDLER,
   SHOW_SETTINGS,
   ZOOM_TO,
+  ADD_MAP,
   RESET_SETTINGS,
   TOGGLE_DIRECTIONS,
 } from 'actions/types'
@@ -29,6 +30,7 @@ const initialState = {
   },
   profile: 'bicycle',
   settings: { ...settingsInit },
+  map: null,
 }
 
 export const common = (state = initialState, action) => {
@@ -50,6 +52,13 @@ export const common = (state = initialState, action) => {
       return {
         ...state,
         coordinates: action.payload,
+      }
+    }
+
+    case ADD_MAP: {
+      return {
+        ...state,
+        map: action.payload,
       }
     }
 

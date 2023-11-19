@@ -8,6 +8,7 @@ import {
   ZOOM_TO,
   RESET_SETTINGS,
   TOGGLE_DIRECTIONS,
+  ADD_MAP,
 } from './types'
 
 import {
@@ -58,6 +59,11 @@ export const resetSettings = () => ({
 export const zoomTo = (coords) => ({
   type: ZOOM_TO,
   payload: coords,
+})
+
+export const addMap = (map) => ({
+  type: ADD_MAP,
+  payload: map,
 })
 
 export const updatePermalink = () => (dispatch, getState) => {

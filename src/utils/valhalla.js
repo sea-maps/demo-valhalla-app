@@ -103,8 +103,8 @@ const makeLocations = (waypoints) => {
   for (const [idx, waypoint] of waypoints.entries()) {
     const type = [0, waypoints.length - 1].includes(idx) ? 'break' : 'via'
     locations.push({
-      lon: waypoint.displaylnglat[0],
-      lat: waypoint.displaylnglat[1],
+      lon: waypoint.x || waypoint.displaylnglat[0],
+      lat: waypoint.y || waypoint.displaylnglat[1],
       type: type,
     })
   }

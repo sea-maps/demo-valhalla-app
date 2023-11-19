@@ -1,7 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { connect } from 'react-redux'
-import L from 'leaflet'
+import L from 'leaflet';
+
 import * as $ from 'jquery'
 import 'jquery-ui-bundle'
 import 'jquery-ui-bundle/jquery-ui.css'
@@ -24,7 +25,7 @@ import {
   updateInclineDeclineTotal,
 } from 'actions/directionsActions'
 import { fetchReverseGeocodeIso } from 'actions/isochronesActions'
-import { updateSettings } from 'actions/commonActions'
+import { addMap, updateSettings } from 'actions/commonActions'
 import {
   VALHALLA_OSM_URL,
   buildHeightRequest,
@@ -139,9 +140,11 @@ class Map extends React.Component {
   // and once the component has mounted we add everything to it
   componentDidMount() {
     // our map!
-    //const { dispatch } = this.props
+    const { dispatch } = this.props
 
     this.map = L.map('map', mapParams)
+
+    dispatch(addMap(this.map))
 
     // we create a leaflet pane which will hold all isochrone polygons with a given opacity
     const isochronesPane = this.map.createPane('isochronesPane')
