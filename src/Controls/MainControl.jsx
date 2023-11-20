@@ -18,7 +18,6 @@ import {
   updatePermalink,
   zoomTo,
 } from 'actions/commonActions'
-import PlaceInformation from './PlaceInformation'
 
 const pairwise = (arr, func) => {
   let cnt = 0
@@ -45,7 +44,7 @@ function MainControl() {
   })
 
   const handleRemoveWaypoints = () => {
-    dispatch(doRemoveWaypoint())
+    dispatch(doRemoveWaypoint(1))
     dispatch(clearRoutes())
   }
 
@@ -97,16 +96,13 @@ function MainControl() {
   return (
     <Box
       position={'absolute'}
-      zIndex={999}
+      zIndex={900}
       top={16}
       left={16}
       padding={2}
       borderRadius={2}
       backgroundColor={'white'}
       width={340}
-      // overflow={'hidden auto'}
-      // height={'max-conten'}
-      // maxHeight={'70vh'}
     >
       <Box>
         {isDisplayDirection && (
@@ -151,7 +147,6 @@ function MainControl() {
               color="red"
               onClick={() => {
                 setDisplayDirection(false)
-
                 handleRemoveWaypoints()
               }}
             >
@@ -161,8 +156,7 @@ function MainControl() {
         )}
         <SearchElement
           indexKey={0}
-          showCurrentLocation={true}
-          showDirections={!isDisplayDirection}
+          showCurrentLocation={isDisplayDirection}
           setShowDirections={() => setDisplayDirection(true)}
         />
         {isDisplayDirection && (
@@ -173,14 +167,14 @@ function MainControl() {
           </Button> */}
             </Box>
 
-            <SearchElement indexKey={1} showCurrentLocation={true} />
+            <SearchElement
+              indexKey={1}
+              showCurrentLocation={true}
+              setShowDirections={() => setDisplayDirection(true)}
+            />
           </>
         )}
       </Box>
-
-      {!isDisplayDirection && waypoints[0] ? (
-        <PlaceInformation data={waypoints[0]} />
-      ) : null}
     </Box>
   )
 }

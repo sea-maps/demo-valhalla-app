@@ -238,6 +238,7 @@ const processGeocodeResponse =
     }
 
     if (init) {
+      console.log('====', processedResults)
       dispatch(
         updateWaypoint({
           waypoint: {

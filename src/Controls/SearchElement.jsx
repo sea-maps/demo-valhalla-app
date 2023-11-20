@@ -8,6 +8,7 @@ import { useDispatch } from 'react-redux'
 import L from 'leaflet'
 import { Box } from '@mui/material'
 import ExtraMarkers from 'Map/extraMarkers'
+import PlaceInformation from './PlaceInformation'
 
 import {
   makeRequest,
@@ -50,7 +51,6 @@ const resultRenderer = (item) => {
 }
 
 const AutocompleteSearch = ({
-  showDirections = false,
   showCurrentLocation = false,
   indexKey = 0,
   setShowDirections,
@@ -76,18 +76,7 @@ const AutocompleteSearch = ({
   const fetchReserveGeocode = useFetchReserveGeocode()
   const fetchSearchGeocode = useFetchSearchGeocode()
 
-  // Function to handle search term change
-  const onSearchChange = useCallback((_, { value }) => {
-    setSearchTerm(value)
-    fetchSearchGeocode(value, indexKey)
-  }, [])
-
-  const onResultSelect = useCallback((event, data) => {
-    const selectedItem = data.result
-
-    setSearchTerm(selectedItem.label)
-    setOpen(false)
-
+  const addMarkerForLocation = useCallback((selectedItem) => {
     const isoMarker = ExtraMarkers.icon({
       icon: 'fa-number',
       markerColor: 'green',
@@ -107,6 +96,21 @@ const AutocompleteSearch = ({
 
     // move the map to have the location in its center
     map.panTo(new L.LatLng(selectedItem.y, selectedItem.x))
+  }, [])
+
+  // Function to handle search term change
+  const onSearchChange = useCallback((_, { value }) => {
+    setSearchTerm(value)
+    fetchSearchGeocode(value, indexKey)
+  }, [])
+
+  const onResultSelect = useCallback((event, data) => {
+    const selectedItem = data.result
+
+    setSearchTerm(selectedItem.label)
+    setOpen(false)
+
+    addMarkerForLocation(selectedItem)
 
     dispatch(
       updateWaypoint({
@@ -135,105 +139,90 @@ const AutocompleteSearch = ({
           true
         )
 
-        const isoMarker = ExtraMarkers.icon({
-          icon: 'fa-number',
-          markerColor: 'green',
-          shape: 'circle',
-          prefix: 'fa',
-          iconColor: 'white',
-          number: (indexKey + 1).toString(),
+        addMarkerForLocation({
+          // eslint-disable-next-line id-length
+          x: position.coords.longitude,
+          // eslint-disable-next-line id-length
+          y: position.coords.latitude,
         })
-
-        if (currentLocationRef.current) {
-          map.removeLayer(currentLocationRef.current)
-        }
-
-        currentLocationRef.current = L.marker(
-          [position.coords.latitude, position.coords.longitude],
-          {
-            icon: isoMarker,
-          }
-        ).addTo(map)
-
-        // move the map to have the location in its center
-        map.panTo(
-          new L.LatLng(position.coords.latitude, position.coords.longitude)
-        )
       })
     }
   }
 
   useEffect(() => {
+    if (!currentLocationRef.current && waypoint.x && waypoint.y) {
+      addMarkerForLocation(waypoint)
+    }
+
     return () => {
       if (currentLocationRef.current) {
         map.removeLayer(currentLocationRef.current)
       }
     }
-  }, [])
+  }, [waypoint.x, waypoint.y])
 
   return (
-    <Box display={'flex'} width={'100%'}>
-      <Search
-        style={{
-          flex: 1,
-          flexGrow: 1,
-        }}
-        fluid
-        input={{
-          icon: 'search',
-          iconPosition: 'left',
-          style: {
-            width: '100%',
-          },
-        }}
-        onSearchChange={onSearchChange}
-        onResultSelect={onResultSelect}
-        resultRenderer={resultRenderer}
-        type="text"
-        showNoResults={false}
-        open={open}
-        onFocus={() => setOpen(true)}
-        onMouseDown={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        loading={waypoint.isFetching}
-        results={waypoint.results || []}
-        value={searchTerm}
-        defaultValue={waypoint.inputValue}
-        placeholder="Hit enter for search..."
-      />
+    <Box display={'flex'} width={'100%'} flexDirection={'column'}>
+      <Box display={'flex'} width={'100%'}>
+        <Search
+          style={{
+            flex: 1,
+            flexGrow: 1,
+          }}
+          fluid
+          input={{
+            icon: 'search',
+            iconPosition: 'left',
+            style: {
+              width: '100%',
+            },
+          }}
+          onSearchChange={onSearchChange}
+          onResultSelect={onResultSelect}
+          resultRenderer={resultRenderer}
+          type="text"
+          showNoResults={false}
+          open={open}
+          onFocus={() => setOpen(true)}
+          onMouseDown={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          loading={waypoint.isFetching}
+          results={waypoint.results || []}
+          value={searchTerm}
+          defaultValue={waypoint.inputValue}
+          placeholder="Hit enter for search..."
+        />
 
-      {showDirections && (
-        <Button
-          onClick={() => setShowDirections()}
-          icon
-          color="blue"
-          style={{ marginLeft: 4 }}
-        >
-          <Icon
-            style={{ transform: 'rotate(-90deg)' }}
-            name="level down alternate"
+        {showCurrentLocation ? (
+          <Button
+            onClick={pointingToCurrentPosition}
+            icon
+            color="blue"
+            style={{ marginLeft: 4 }}
+          >
+            <Icon name="crosshairs" />
+          </Button>
+        ) : null}
+      </Box>
+
+      {waypoint.x && waypoint.y & !showCurrentLocation ? (
+        <Box maxHeight={'70vh'} marginTop={1} overflow={'auto'}>
+          <PlaceInformation
+            pointingToCurrentPosition={() => addMarkerForLocation(waypoint)}
+            setShowDirections={setShowDirections}
+            data={waypoint}
           />
-        </Button>
-      )}
-      {showCurrentLocation ? (
-        <Button
-          onClick={pointingToCurrentPosition}
-          icon
-          color="blue"
-          style={{ marginLeft: 4 }}
-        >
-          <Icon name="crosshairs" />
-        </Button>
+        </Box>
       ) : null}
     </Box>
   )
 }
 
 AutocompleteSearch.propTypes = {
-  showDirections: PropTypes.bool,
   showCurrentLocation: PropTypes.bool,
-  indexKey: PropTypes.number.isRequired,
   setShowDirections: PropTypes.func,
+  showDirection: PropTypes.bool,
+  indexKey: PropTypes.number.isRequired,
 }
 
 export default AutocompleteSearch

@@ -101,13 +101,13 @@ const makeContours = ({ maxRange, interval }) => {
 const makeLocations = (waypoints) => {
   const locations = []
   for (const [idx, waypoint] of waypoints.entries()) {
-    if (waypoint.x === 0 && waypoint.y === 0) {
+    if (!waypoint.x && !waypoint.y) {
       continue
     }
     const type = [0, waypoints.length - 1].includes(idx) ? 'break' : 'via'
     locations.push({
-      lon: waypoint.x != undefined ? waypoint.x : waypoint.displaylnglat[0],
-      lat: waypoint.y != undefined ? waypoint.y : waypoint.displaylnglat[1],
+      lon: waypoint.x,
+      lat: waypoint.y,
       type: type,
     })
   }

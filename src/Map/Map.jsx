@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { connect } from 'react-redux'
-import L from 'leaflet';
+import L from 'leaflet'
 
 import * as $ from 'jquery'
 import 'jquery-ui-bundle'
@@ -116,6 +116,7 @@ class Map extends React.Component {
   static propTypes = {
     dispatch: PropTypes.func.isRequired,
     directions: PropTypes.object,
+    directionsV2: PropTypes.object,
     isochrones: PropTypes.object,
     profile: PropTypes.string,
     activeTab: PropTypes.number,
@@ -422,14 +423,13 @@ class Map extends React.Component {
       prevProps.directionsV2.zoomObj.timeNow <
       this.props.directionsV2.zoomObj.timeNow
     ) {
-      console.log("this.props.directionsV2", this.props.directionsV2)
       this.zoomTo(this.props.directionsV2.zoomObj.index)
     }
 
     this.addRoutes()
     this.handleHighlightSegment()
 
-    const { directionsV2, isochrones } = this.props
+    const { directionsV2 } = this.props
 
     if (!directionsV2.successful) {
       routeLineStringLayer.clearLayers()
@@ -794,7 +794,9 @@ class Map extends React.Component {
     const { waypoints } = this.props.directionsV2
     let index = 0
     for (const waypoint of waypoints) {
-      if(!waypoint.x || !waypoint.y) continue;
+      if (!waypoint.x || !waypoint.y) {
+        continue
+      }
 
       const wpMarker = ExtraMarkers.icon({
         icon: 'fa-number',
@@ -861,7 +863,7 @@ class Map extends React.Component {
     const { map } = this
     const { lat, lng } = map.getCenter()
     const zoom = map.getZoom()
-    console.log("====", zoom)
+    console.log('====', zoom)
     const osmURL = `https://www.openstreetmap.org/#map=${zoom}/${lat}/${lng}`
     window.open(osmURL, '_blank')
   }
