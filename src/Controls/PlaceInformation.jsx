@@ -73,7 +73,7 @@ function PlaceInformation({
               name="level down alternate"
             />
           </Button>
-          <Button icon color="blue" onSave={onSave}>
+          <Button icon color="blue" onClick={onSave}>
             <Icon name="copy" />
           </Button>
           <Button icon color="blue" onClick={pointingToCurrentPosition}>
