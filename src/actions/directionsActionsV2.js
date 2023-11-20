@@ -41,7 +41,9 @@ const serverMapping = {
 
 export const doAddWaypoint = (doInsert) => (dispatch, getState) => {
   const emptyWp = {
+    // eslint-disable-next-line id-length
     x: 0,
+    // eslint-disable-next-line id-length
     y: 0,
     raw: undefined,
     isFetching: false,
@@ -238,7 +240,6 @@ const processGeocodeResponse =
     }
 
     if (init) {
-      console.log('====', processedResults)
       dispatch(
         updateWaypoint({
           waypoint: {

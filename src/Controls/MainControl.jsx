@@ -10,6 +10,7 @@ import {
   clearRoutes,
   doRemoveWaypoint,
   doAddWaypoint,
+  updateWaypoint,
 } from 'actions/directionsActionsV2'
 
 import {
@@ -30,8 +31,6 @@ const pairwise = (arr, func) => {
 function MainControl() {
   const dispatch = useDispatch()
 
-  const [isDisplayDirection, setDisplayDirection] = useState(false)
-
   const profile = useSelector((state) => {
     return state.common.profile
   })
@@ -42,6 +41,9 @@ function MainControl() {
   const waypoints = useSelector((state) => {
     return state.directionsV2.waypoints || []
   })
+  const [isDisplayDirection, setDisplayDirection] = useState(
+    waypoints.length >= 2
+  )
 
   const handleRemoveWaypoints = () => {
     dispatch(doRemoveWaypoint(1))
@@ -52,7 +54,6 @@ function MainControl() {
     dispatch(updateProfile({ profile: newProfile }))
     dispatch(resetSettings())
     dispatch(updatePermalink())
-
     dispatch(makeRequest())
   }
 
@@ -89,6 +90,30 @@ function MainControl() {
     }
   }, [])
 
+  const onReserveWaypoints = (data = []) => {
+    const [first, second] = data
+
+    dispatch(
+      updateWaypoint({
+        waypoint: {
+          ...first,
+          inputValue: first.label,
+        },
+        index: 1,
+      })
+    )
+    dispatch(
+      updateWaypoint({
+        waypoint: {
+          ...second,
+          inputValue: second.label,
+        },
+        index: 0,
+      })
+    )
+    dispatch(updatePermalink())
+    dispatch(makeRequest())
+  }
   if (!map) {
     return null
   }
@@ -162,9 +187,13 @@ function MainControl() {
         {isDisplayDirection && (
           <>
             <Box marginTop={2} marginBottom={2}>
-              {/* <Button icon color="blue">
-            <Icon style={{ transform: 'rotate(90deg)' }} name="exchange" />
-          </Button> */}
+              <Button
+                icon
+                color="blue"
+                onClick={() => onReserveWaypoints(waypoints)}
+              >
+                <Icon style={{ transform: 'rotate(90deg)' }} name="exchange" />
+              </Button>
             </Box>
 
             <SearchElement
