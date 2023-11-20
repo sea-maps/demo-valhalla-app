@@ -98,6 +98,7 @@ function PlaceInformation({
             const search = decodeURIComponent(window.location.search)
             const queryParams = new URLSearchParams(search)
 
+            queryParams.delete('wps')
             queryParams.set('wps', `${coordinates.join(',')}`)
 
             const href = window.location.pathname + '?' + queryParams.toString()
