@@ -127,10 +127,16 @@ function MainControl() {
       padding={2}
       borderRadius={2}
       backgroundColor={'white'}
-      width={340}
+      width={360}
     >
-      <Box>
-        {isDisplayDirection && (
+      {isDisplayDirection && (
+        <Box
+          width={'100%'}
+          display={'grid'}
+          gridTemplateColumns={'40px auto'}
+          gap={1}
+        >
+          <Box></Box>
           <Box
             display={'flex'}
             marginBottom={2}
@@ -178,31 +184,45 @@ function MainControl() {
               <Icon name="cancel" />
             </Button>
           </Box>
-        )}
-        <SearchElement
-          indexKey={0}
-          showCurrentLocation={isDisplayDirection}
-          setShowDirections={() => setDisplayDirection(true)}
-        />
+        </Box>
+      )}
+      <Box
+        width={'100%'}
+        display={'grid'}
+        gridTemplateColumns={isDisplayDirection ? '40px auto' : 'auto'}
+        gap={1}
+      >
         {isDisplayDirection && (
           <>
-            <Box marginTop={2} marginBottom={2}>
+            <Box margin={'auto'}>
               <Button
                 icon
                 color="blue"
                 onClick={() => onReserveWaypoints(waypoints)}
               >
-                <Icon style={{ transform: 'rotate(90deg)' }} name="exchange" />
+                <Icon name="exchange" />
               </Button>
             </Box>
-
-            <SearchElement
-              indexKey={1}
-              showCurrentLocation={true}
-              setShowDirections={() => setDisplayDirection(true)}
-            />
           </>
         )}
+        <Box>
+          <SearchElement
+            indexKey={0}
+            showCurrentLocation={isDisplayDirection}
+            setShowDirections={() => setDisplayDirection(true)}
+          />
+          {isDisplayDirection && (
+            <>
+              <Box marginTop={2}>
+                <SearchElement
+                  indexKey={1}
+                  showCurrentLocation={true}
+                  setShowDirections={() => setDisplayDirection(true)}
+                />
+              </Box>
+            </>
+          )}
+        </Box>
       </Box>
     </Box>
   )

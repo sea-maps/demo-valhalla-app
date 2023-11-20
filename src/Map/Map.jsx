@@ -863,7 +863,6 @@ class Map extends React.Component {
     const { map } = this
     const { lat, lng } = map.getCenter()
     const zoom = map.getZoom()
-    console.log('====', zoom)
     const osmURL = `https://www.openstreetmap.org/#map=${zoom}/${lat}/${lng}`
     window.open(osmURL, '_blank')
   }
