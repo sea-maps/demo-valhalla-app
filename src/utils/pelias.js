@@ -6,6 +6,7 @@ export const PELIASE_URL_REVERSE = `${process.env.REACT_APP_PELIAS_URL}/v1/rever
 /* Check if string is a valid latitude and longitude  */
 export function checkIfValidLatLng(str) {
   // Regular expression to check if string is a latitude and longitude
+  // eslint-disable-next-line no-useless-escape
   const regexExp = /^((\-?|\+?)?\d+(\.\d+)?),\s*((\-?|\+?)?\d+(\.\d+)?)$/gi
 
   return regexExp.test(str)
@@ -36,7 +37,9 @@ export const reverseGeocode = async ({ lat, lng }) => {
 export const parseGeocodeResponse = (resp) => {
   const processedResults = resp.data.features.map((feature) => {
     const res = {
+      // eslint-disable-next-line id-length
       x: feature.geometry.coordinates[0],
+      // eslint-disable-next-line id-length
       y: feature.geometry.coordinates[1],
       label: feature.properties.label,
       bounds: null,
